@@ -11,6 +11,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from agents.base_agent import BaseAgent
 from agents.vision_agent import VisionAgent
+from agents.language_agent import LanguageAgent
+from agents.coordinator_agent import CoordinatorAgent
 
 def main():
     st.set_page_config(
@@ -24,14 +26,21 @@ def main():
     
     # Initialize agents in session state
     if 'agents' not in st.session_state:
-        with st.spinner("Loading AI models..."):
-            # In app.py, inside the session_state setup:
-           st.session_state.agents = {
-             'vision': VisionAgent(emotion_model_path="models/emotion_model.h5"),
-             'alice': BaseAgent("Alice", ["communication", "echo"]),
-             'bob': BaseAgent("Bob", ["communication", "echo"]),
-            'charlie': BaseAgent("Charlie", ["communication", "echo"])
-}
+     with st.spinner("Loading AI models..."):
+        # Initialize Vision Agent with your emotion model path
+        vision_agent = VisionAgent(emotion_model_path="models/emotion_model.h5")
+        # Initialize Language and Coordinator Agents
+        language_agent = LanguageAgent()
+        coordinator_agent = CoordinatorAgent(vision_agent=vision_agent, language_agent=language_agent)
+        
+        st.session_state.agents = {
+            'vision': vision_agent,
+            'language': language_agent,
+            'coordinator': coordinator_agent,
+            'alice': BaseAgent("Alice", ["communication", "echo"]),
+            'bob': BaseAgent("Bob", ["communication", "echo"]),
+            'charlie': BaseAgent("Charlie", ["communication", "echo"]),
+    }
     
     # Sidebar: Agent status
     st.sidebar.header("🤖 Agent Status")
@@ -57,7 +66,12 @@ def main():
             st.sidebar.write(f"Messages: {status['message_count']}")
     
     # Main tabs
-    tab1, tab2, tab3 = st.tabs(["🔍 Vision Analysis", "🗣️ Agent Communication", "📊 Performance"])
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "🔍 Vision Analysis", 
+        "🗣️ Agent Communication", 
+        "📊 Performance", 
+        "🤝 Task Collaboration"
+    ])
     
     with tab1:
         st.header("🔍 Vision Agent Analysis")
@@ -294,6 +308,40 @@ def main():
             
             for atype, count in analysis_types.items():
                 st.write(f"• {atype}: {count}")
+    with tab4:
+        st.header("🤝 Task Collaboration: Smart Caption Generator")
+        st.subheader("Generate a caption for an image using Vision + Language Agents")
+        
+        # Upload image
+        uploaded_file = st.file_uploader(
+            "Upload Image",
+            type=["jpg", "png"],
+            help="Upload a photo (e.g., happy face) to generate a caption."
+        )
+        
+        # Process button
+        if uploaded_file:
+            image = Image.open(uploaded_file)
+            if st.button("Generate Caption", type="primary"):
+                with st.spinner("Agents collaborating..."):
+                    # Get Coordinator Agent and process task
+                    coordinator = st.session_state.agents['coordinator']
+                    task_result = coordinator.process_image_task(image)
+                    
+                    # Display results
+                    if task_result.get("status") == "success":
+                        st.success("Caption Generated Successfully!")
+                        # Show Vision analysis
+                        st.subheader("Vision Agent Analysis:")
+                        vision_analysis = task_result["vision_analysis"]
+                        if vision_analysis.get("analysis"):
+                            scene_desc = vision_analysis["analysis"]["scene_analysis"]["description"]["natural_language"]
+                            st.write(f"Scene Description: {scene_desc}")
+                        # Show Language caption
+                        st.subheader("Language Agent Caption:")
+                        st.write(f"Caption: {task_result['final_caption']}")
+                    else:
+                        st.error(f"Task Failed: {task_result.get('error')} ({task_result.get('details')})")
         
         # General agent performance
         st.subheader("🤖 All Agents Performance")
