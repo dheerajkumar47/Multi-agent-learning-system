@@ -1,5 +1,6 @@
 streamlit==1.49.1
-opencv-python-headless==4.8.1.78
+opencv-python==4.8.1.78
+opencv-contrib-python==4.12.0.88
 torch==2.7.1
 torchvision==0.22.1
 transformers==4.45.0
@@ -16,4 +17,4 @@ gradio==4.44.0
 scikit-learn==1.7.2
 ultralytics==8.3.198
 python-dotenv==1.1.1
-tensorflow==2.20.0
+Tensorflow==2.20.0
